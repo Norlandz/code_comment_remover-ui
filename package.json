@@ -3,21 +3,42 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node ./src/run/index.mjs",
+    "dev2": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@types/node": "20.4.10",
+    "@auth0/nextjs-auth0": "^3.1.0",
+    "@types/bcryptjs": "^2.4.2",
+    "@types/body-parser": "^1.19.2",
+    "@types/cookie": "^0.5.1",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@types/lokijs": "^1.5.8",
     "@types/react": "18.2.20",
     "@types/react-dom": "18.2.7",
     "autoprefixer": "10.4.14",
+    "axios": "^1.4.0",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cookie": "^0.5.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.1",
+    "lokijs": "^1.5.12",
+    "moment": "^2.29.4",
     "next": "13.4.13",
+    "next-auth": "^4.23.0",
     "postcss": "8.4.27",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-select": "^5.7.4",
     "tailwindcss": "3.3.3",
     "typescript": "5.1.6"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "20.4.10",
+    "typescript-plugin-css-modules": "^5.0.1"
   }
 }
