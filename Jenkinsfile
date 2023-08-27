@@ -54,8 +54,24 @@ pipeline {
                 //     }
                 // }
 
-                bat 'set JENKINS_NODE_COOKIE=doNotKill'
-                bat 'start "code_comment_remover-ui process" /b npm run dev'
+                // command line - How to terminate a background process? - Unix & Linux Stack Exchange
+                // https://unix.stackexchange.com/questions/104821/how-to-terminate-a-background-process
+                // 
+                // linux - How to get process ID of background process? - Stack Overflow
+                // https://stackoverflow.com/questions/1908610/how-to-get-process-id-of-background-process
+                // 
+                // Start a Command Prompt and then change the title of it via batch file? - Super User
+                // https://superuser.com/questions/944981/start-a-command-prompt-and-then-change-the-title-of-it-via-batch-file
+                // 
+                // windows - How to get PID of process just started from within a batch file? - Stack Overflow
+                // https://stackoverflow.com/questions/9486960/how-to-get-pid-of-process-just-started-from-within-a-batch-file
+
+                script {
+                  bat 'set JENKINS_NODE_COOKIE=do_not_kill'
+                  bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                  bat 'start "T-code_comment_remover-ui" /b npm run dev'
+                  bat 'tasklist /V /FI "WindowTitle eq T-code_comment_remover-ui*'
+                }
             }
         }
         
