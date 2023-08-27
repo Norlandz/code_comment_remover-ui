@@ -67,10 +67,12 @@ pipeline {
                 // https://stackoverflow.com/questions/9486960/how-to-get-pid-of-process-just-started-from-within-a-batch-file
 
                 script {
-                  bat 'set JENKINS_NODE_COOKIE=do_not_kill'
-                  bat 'set JENKINS_NODE_COOKIE=doNotKill'
-                  bat 'start "T-code_comment_remover-ui" /b npm run dev'
-                  bat 'tasklist /V /FI "WindowTitle eq T-code_comment_remover-ui*'
+                  withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
+                    bat 'set JENKINS_NODE_COOKIE=do_not_kill'
+                    bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                    bat 'start "T-code_comment_remover-ui" /b npm run dev'
+                    bat 'tasklist /V /FI "WindowTitle eq T-code_comment_remover-ui*'
+                  }
                 }
             }
         }
