@@ -85,14 +85,23 @@ pipeline {
                 // ;not_working; }
 
 
-              //  script {
-              //      withEnv ( ['JENKINS_NODE_COOKIE=doNotKill'] ) {
-              //        bat 'start /b npm run dev'
-              //      }
-              //  }
+              // ;working; script {
+              // ;working;     withEnv ( ['JENKINS_NODE_COOKIE=doNotKill'] ) {
+              // ;working;       bat 'start /b npm run dev'
+              // ;working;     }
+              // ;working; }
 
-              bat 'set JENKINS_NODE_COOKIE=doNotKill'
-              bat 'start /b npm run dev'
+              // ;not_working; bat 'set JENKINS_NODE_COOKIE=doNotKill'
+              // ;not_working; bat 'start /b npm run dev'
+              // guess new shell? not taking the env? 
+
+              script {
+                   withEnv ( ['JENKINS_NODE_COOKIE=doNotKill'] ) {
+                       bat 'start "T-code_comment_remover-ui" /b npm run dev'
+                       bat 'tasklist /V /FI "WindowTitle eq T-code_comment_remover-ui*"'
+                   }
+              }
+              
             }
         }
         
