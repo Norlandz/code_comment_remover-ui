@@ -95,9 +95,19 @@ pipeline {
               // ;not_working; bat 'start /b npm run dev'
               // guess new shell? not taking the env? 
 
+              // []
+              // This is how my PHP internal server goes into background. So technically it should work for all.
+              // 
+              // start /B "" php -S 0.0.0.0:8000 &
+              // <>
+              // https://superuser.com/questions/198525/how-can-i-execute-a-windows-command-line-in-background
+              // 
+              // ~~~// why the syntax is wrong in doc thne? 
+
+
               script {
                    withEnv ( ['JENKINS_NODE_COOKIE=doNotKill'] ) {
-                       bat 'start "T-code_comment_remover-ui" /b npm run dev'
+                       bat 'start /b "T-code_comment_remover-ui" npm run dev'
                        bat 'tasklist /V /FI "WindowTitle eq T-code_comment_remover-ui*"'
                    }
               }
