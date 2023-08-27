@@ -84,8 +84,12 @@ pipeline {
                 // ;not_working;   }
                 // ;not_working; }
 
-                bat 'set JENKINS_NODE_COOKIE=doNotKill'
-                bat 'start /b npm run dev'
+
+               script {
+                   withEnv ( ['JENKINS_NODE_COOKIE=doNotKill'] ) {
+                     bat 'start /b npm run dev'
+                   }
+               }
             }
         }
         
