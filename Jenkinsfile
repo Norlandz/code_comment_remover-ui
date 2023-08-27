@@ -46,14 +46,16 @@ pipeline {
                 // bat 'set JENKINS_NODE_COOKIE=do_not_kill'
                 // bat 'start /b npm run dev'
 
+                // script {
+                //     withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
+                //       bat 'set JENKINS_NODE_COOKIE=do_not_kill'
+                //       bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                //       bat 'start /b npm run dev'
+                //     }
+                // }
 
-                script {
-                    withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
-                      bat 'set JENKINS_NODE_COOKIE=do_not_kill'
-                      bat 'set JENKINS_NODE_COOKIE=doNotKill'
-                      bat 'start /b npm run dev'
-                    }
-                }
+                bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                bat 'start "code_comment_remover-ui process" /b npm run dev'
             }
         }
         
