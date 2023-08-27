@@ -46,13 +46,15 @@ pipeline {
                 // bat 'set JENKINS_NODE_COOKIE=do_not_kill'
                 // bat 'start /b npm run dev'
 
-                // script {
-                //     withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
-                //       bat 'set JENKINS_NODE_COOKIE=do_not_kill'
-                //       bat 'set JENKINS_NODE_COOKIE=doNotKill'
-                //       bat 'start /b npm run dev'
-                //     }
-                // }
+                // ;working; script {
+                // ;working;     withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
+                // ;working;       bat 'set JENKINS_NODE_COOKIE=do_not_kill'
+                // ;working;       bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                // ;working;       bat 'start /b npm run dev'
+                // ;working;     }
+                // ;working; }
+
+
 
                 // command line - How to terminate a background process? - Unix & Linux Stack Exchange
                 // https://unix.stackexchange.com/questions/104821/how-to-terminate-a-background-process
@@ -66,14 +68,24 @@ pipeline {
                 // windows - How to get PID of process just started from within a batch file? - Stack Overflow
                 // https://stackoverflow.com/questions/9486960/how-to-get-pid-of-process-just-started-from-within-a-batch-file
 
-                script {
-                  withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
-                    bat 'set JENKINS_NODE_COOKIE=do_not_kill'
-                    bat 'set JENKINS_NODE_COOKIE=doNotKill'
-                    bat 'start "T-code_comment_remover-ui" /b npm run dev'
-                    bat 'tasklist /V /FI "WindowTitle eq T-code_comment_remover-ui*'
-                  }
-                }
+
+                // ;not_working; bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                //
+                // ;not_working; script {
+                // ;not_working;     bat 'set JENKINS_NODE_COOKIE=do_not_kill'
+                // ;not_working;     bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                //
+                // ;not_working; script {
+                // ;not_working;   withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
+                // ;not_working;     bat 'set JENKINS_NODE_COOKIE=do_not_kill'
+                // ;not_working;     bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                // ;not_working;     bat 'start "T-code_comment_remover-ui" /b npm run dev'
+                // ;not_working;     bat 'tasklist /V /FI "WindowTitle eq T-code_comment_remover-ui*'
+                // ;not_working;   }
+                // ;not_working; }
+
+                bat 'set JENKINS_NODE_COOKIE=doNotKill'
+                bat 'start npm run dev'
             }
         }
         
