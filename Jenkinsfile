@@ -43,9 +43,15 @@ pipeline {
                 // <>
                 // https://superuser.com/questions/1049430/how-do-you-set-environment-variables-for-a-single-command-on-windows
 
-                bat 'set JENKINS_NODE_COOKIE=do_not_kill'
-                bat 'start /b npm run dev'
+                // bat 'set JENKINS_NODE_COOKIE=do_not_kill'
+                // bat 'start /b npm run dev'
 
+
+                script {
+                    withEnv ( ['JENKINS_NODE_COOKIE=do_not_kill'] ) {
+                      bat 'start /b npm run dev'
+                    }
+                }
             }
         }
         
