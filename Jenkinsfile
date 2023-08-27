@@ -85,7 +85,7 @@ pipeline {
                 // ;not_working; }
 
                 bat 'set JENKINS_NODE_COOKIE=doNotKill'
-                bat 'start npm run dev'
+                bat 'start /b npm run dev'
             }
         }
         
