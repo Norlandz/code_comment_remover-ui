@@ -15,7 +15,7 @@ pipeline {
         } 
         stage('Deploy') {
             steps {
-                echo 'Just run in Master directly; this starts the program in the background; <> though a proper way should just deploy to Docker / use Publish_Over_Ssh.'
+                echo 'Just run in Master directly; this starts the program in the background; <> though a proper way should just deploy to Docker / use Publish_Over_Ssh.; currenly has no way to terminate & replace the old running app.'
                 //                 // bat 'start /b npm run dev'
                 // 
                 //                 // jenkins - Running a background process in Pipeline job - DevOps Stack Exchange
