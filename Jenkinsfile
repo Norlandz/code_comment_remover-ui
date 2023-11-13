@@ -42,7 +42,10 @@ pipeline {
         // nvm install 18.12.0
         // npm install
         // '''
+        sh 'node --version'
+        sh 'npm --version'
         sh 'npm install -g pnpm@8.10.2'
+        sh 'pnm --version'
       }
     }
     stage('build') {
