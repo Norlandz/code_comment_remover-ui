@@ -83,6 +83,8 @@ pipeline {
       }
     }
     // @think: compnesation step if fail... 
+    // @note: remember to add swapfile to Ec2
+    // FIXME space used up quickly Jenkins / Docker es pb -- volume image prune ...
     stage('call (async) remote server to pull & run (deploy) docker image (using watchtower)') { // watchtower will do this, no need to _ special docker trigger / publish_over_ssh _
       steps {
         // TODO secret should be stored in .env ... 
@@ -118,6 +120,10 @@ pipeline {
         sh 'yes | docker system prune'
       }
     }
+    // TODO use webpack
+    // TODO use npm & maven cache pb
+    // TODO jenkins config better make into a file
+    // TODO make a procedure file
     stage('done') {
       steps {
         sh 'echo done'
