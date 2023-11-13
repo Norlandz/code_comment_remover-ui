@@ -41,6 +41,7 @@ services:
       - '/var/run/docker.sock:/var/run/docker.sock'
     # restart: 'unless-stopped' # aga need better policy -- dont bindly restart - but need start up at system boot
     # // TODO restart docker or not (ec2 restart; jenkins restart; dk other cases too)
+    # @que: docker-compose up twice seems multi create
     ports:
       - '8686:8080' # call watchtower to pull new docker image
     container_name: 'watchtower'

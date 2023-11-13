@@ -7,4 +7,4 @@ RUN npm install -g pnpm@8.10.2
 RUN pnpm install
 
 EXPOSE 3000
-CMD ["pnpm", "start"]
+CMD ["pnpm", "run", "dev"]
