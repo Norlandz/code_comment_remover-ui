@@ -1,0 +1,45 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run ts file one click with tsx (global)",
+      "runtimeExecutable": "tsx",
+      "runtimeArgs": [],
+      "program": "${file}",
+      "args": [],
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/**"
+      ],
+    },
+    // {
+    //   "type": "chrome",
+    //   "request": "launch",
+    //   "name": "Open index.html",
+    //   "file": "h:\\Using\\tldraw-contribute\\tldraw\\apps\\examples\\src\\index.html"
+    // },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Debug Vite",
+      "url": "http://localhost:5173",
+      // https://stackoverflow.com/questions/66147328/is-there-a-way-to-debug-code-in-vscode-initiated-with-vite
+      // must have the vite server already running, then attach 
+      // "webRoot": "H:/Using/tldraw-contribute/tldraw/apps/examples/src"
+      // "webRoot": "H:/Using/TLightChat/tlightchat-main"
+      "webRoot": "${workspaceFolder}",
+      // https://stackoverflow.com/questions/47556495/how-do-i-skip-external-code-when-debugging-in-vs-code
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**/*.js",
+        "**/proxy.js",
+        "**/prepareinjection.js",
+        "**/installhook.js",
+        "main.jsx",
+        "@react-refresh",
+      ],
+    }
+  ]
+}

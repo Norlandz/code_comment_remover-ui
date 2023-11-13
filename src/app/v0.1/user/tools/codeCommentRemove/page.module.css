@@ -1,0 +1,22 @@
+.panelMainConvert {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: stretch;
+  border: 1px solid blue;
+}
+.panelMainConvert .panelCode {
+  min-width: 400px;
+  min-height: 600px;
+}
+.panelMainConvert .panelInputCode {
+  border: 1px solid orange;
+}
+.panelMainConvert .panelOutputCode {
+  border: 1px solid grey;
+}
+.panelMainConvert .panelConvertButtonBox {
+  border: 1px solid grey;
+}/*# sourceMappingURL=page.module.css.map */

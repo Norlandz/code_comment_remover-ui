@@ -1,0 +1,28 @@
+.panelMainConvert {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: stretch;
+
+  border: 1px solid blue;
+
+  .panelCode {
+    min-width: 400px;
+    min-height: 600px;
+  }
+
+  .panelInputCode {
+    border: 1px solid orange;
+  }
+
+  .panelOutputCode {
+    border: 1px solid grey;
+  }
+
+  .panelConvertButtonBox {
+    border: 1px solid grey;
+  }
+
+}
