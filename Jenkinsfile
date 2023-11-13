@@ -92,13 +92,19 @@ pipeline {
     stage('call (async) remote server to pull & run (deploy) docker image (using watchtower)') { // watchtower will do this, no need to _ special docker trigger / publish_over_ssh _
       steps {
         sh 'echo "this curl will fail -- if watchtower is not up yet. \nwhich can happen at the first time of the whole project setup -- \n1. this script need to build the image to dockerhub \n2. docker-compose.yml file pulls the image and start up all containers \n3. watchtower will be started in that docker-compose.yml together \n-- once watchtower is up, all later builds will be able to call to watchtower no problem."'
-        sh 'curl -H "Authorization: Bearer tokenVal_WATCHTOWER_HTTP_API_TOKEN_toBeSentFromJenkins" 10.15.1.137:8080/v1/update' // FIXME @config the ip address need know ahead of time?...
+        sh 'curl -H "Authorization: Bearer tokenVal_WATCHTOWER_HTTP_API_TOKEN_toBeSentFromJenkins" --max-time 20 10.15.1.137:8686/v1/update' // FIXME @config the ip address need know ahead of time?...
       }
     }
     // TODO use webpack
     // TODO use npm & maven cache pb
     // TODO jenkins config better make into a file
     // TODO make a procedure file
+    stage('clean up docker image docker volume') { // @not_sure
+      steps {
+        sh 'echo done'
+        sh 'ls -la'
+      }
+    }
     stage('done') {
       steps {
         sh 'echo done'
