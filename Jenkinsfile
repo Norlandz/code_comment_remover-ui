@@ -29,7 +29,7 @@ pipeline {
 
     stage('checkout') {
       steps {
-        git branch: 'main', url: 'https://github.com/Norlandz/code_comment_remover-ui-awstest' // @config[project name]
+        git branch: 'main', url: 'https://github.com/Norlandz/code_comment_remover-ui' // @config[project name]
         sh 'pwd'
         sh 'ls -la'
       }
