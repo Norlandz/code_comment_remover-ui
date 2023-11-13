@@ -17,7 +17,7 @@ services:
     # container_name: 'javaParserSub'
   watchtower:
     # image: 'containrrr/watchtower:arm64v8-1.7.1'
-    image: 'containrrr/watchtower:@sha256:f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b' # https://hub.docker.com/layers/containrrr/watchtower/amd64-1.7.1/images/sha256-f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b?context=explore
+    image: 'containrrr/watchtower@sha256:f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b' # https://hub.docker.com/layers/containrrr/watchtower/amd64-1.7.1/images/sha256-f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b?context=explore
     command: '--schedule "0 0 4 * * *" --http-api-update --cleanup'
     environment:
       - WATCHTOWER_HTTP_API_TOKEN=tokenVal_WATCHTOWER_HTTP_API_TOKEN_toBeSentFromJenkins
