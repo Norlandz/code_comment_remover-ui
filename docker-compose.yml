@@ -1,7 +1,7 @@
 version: '3.9'
 services:
   codeCommentRemoverUi:
-    image: 'mindde/code-comment-remover-ui:v0.0.1'
+    image: 'mindde/code_comment_remover-ui:v0.0.1'
     ports:
       - '3000:3000' # main entry to the App
     # container_name: 'codeCommentRemoverUi'
@@ -39,6 +39,7 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     # restart: 'unless-stopped' # aga need better policy -- dont bindly restart - but need start up at system boot
+    # // TODO restart docker or not (ec2 restart; jenkins restart; dk other cases too)
     ports:
       - '8686:8080' # call watchtower to pull new docker image
     container_name: 'watchtower'

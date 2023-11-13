@@ -12,7 +12,7 @@ pipeline {
           // use nested stage
           // label 'jenkinsAgent-jdk17-docker'
           // // label 'felipecrs_jenkins_agent_dind_20231111'
-          image 'node:20.9.0-slim' 
+          image 'node@sha256:c325fe5059c504933948ae6483f3402f136b96492dff640ced5dfa1f72a51716' // https://hub.docker.com/layers/library/node/20.9.0-slim/images/sha256-c325fe5059c504933948ae6483f3402f136b96492dff640ced5dfa1f72a51716?context=explore
           args '-v /var/run/docker.sock:/var/run/docker.sock'
           reuseNode true
         }
@@ -87,12 +87,18 @@ pipeline {
       }
     }
     // @think: compnesation step if fail... 
+    // @note: remember to add swapfile to Ec2
+    // FIXME space used up quickly Jenkins / Docker es pb -- volume image prune ...
     stage('call (async) remote server to pull & run (deploy) docker image (using watchtower)') { // watchtower will do this, no need to _ special docker trigger / publish_over_ssh _
       steps {
         sh 'echo "this curl will fail -- if watchtower is not up yet. \nwhich can happen at the first time of the whole project setup -- \n1. this script need to build the image to dockerhub \n2. docker-compose.yml file pulls the image and start up all containers \n3. watchtower will be started in that docker-compose.yml together \n-- once watchtower is up, all later builds will be able to call to watchtower no problem."'
         sh 'curl -H "Authorization: Bearer tokenVal_WATCHTOWER_HTTP_API_TOKEN_toBeSentFromJenkins" 10.15.1.137:8080/v1/update' // FIXME @config the ip address need know ahead of time?...
       }
     }
+    // TODO use webpack
+    // TODO use npm & maven cache pb
+    // TODO jenkins config better make into a file
+    // TODO make a procedure file
     stage('done') {
       steps {
         sh 'echo done'
