@@ -4,16 +4,19 @@ services:
     image: 'mindde/code_comment_remover-ui:v0.0.1'
     ports:
       - '3000:3000' # main entry to the App
+    network_mode: "host"
     # container_name: 'codeCommentRemoverUi'
   jsParserSub:
     image: 'mindde/jsparsersub:v0.0.1'
     ports:
       - '127.0.0.1:14080:14080'
+    network_mode: "host"
     # container_name: 'jsParserSub'
   javaParserSub:
     image: 'mindde/javaparsersub:v0.0.1'
     ports:
       - '127.0.0.1:18082:18082'
+    network_mode: "host"
     # container_name: 'javaParserSub'
   watchtower:
     # image: 'containrrr/watchtower:arm64v8-1.7.1'
@@ -41,6 +44,7 @@ services:
       - '/var/run/docker.sock:/var/run/docker.sock'
     restart: 'unless-stopped' # aga need better policy -- dont bindly restart - but need start up at system boot
     # // TODO restart docker or not (ec2 restart; jenkins restart; dk other cases too)
+    # TODO @need_check network_mode
     # @que: docker-compose up twice seems multi create
     ports:
       - '8686:8080' # call watchtower to pull new docker image
