@@ -101,24 +101,6 @@ pipeline {
           curl -H "Authorization: Bearer tokenVal_WATCHTOWER_HTTP_API_TOKEN_toBeSentFromJenkins" --max-time 20 --location http://${ipAddr_MainApp_withWatchtower}:8686/v1/update
           """ 
         }
-<<<<<<< refs/remotes/origin/main
-      }
-    }
-    // @todo may use webpack
-    // TODO use npm & maven cache pb
-    // TODO jenkins config better make into a file ;& make a procedure file
-
-    // @pb[space used up quickly Jenkins / Docker es pb -- volume image prune ...] @not_sure 
-    // https://stackoverflow.com/questions/45128781/no-space-on-device-with-jenkins-and-docker-how-to-cleanup-properly
-    // 1. should this be done outside the container? or it breaks sth? 
-    // 1. will this remove cache? 
-    // 1. should i set the config of Jenkins cloud agent template or do it here?
-    stage('clean up docker image volume') { 
-      steps {
-        // docker container prune // docker image prune // docker volume prune
-        sh 'yes | docker system prune'
-=======
->>>>>>> Auto stash before merge of "main" and "origin/main"
       }
     }
     // @todo may use webpack
