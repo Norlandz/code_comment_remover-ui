@@ -20,7 +20,7 @@ services:
     # container_name: 'javaParserSub'
   watchtower:
     # image: 'containrrr/watchtower:arm64v8-1.7.1'
-    image: 'containrrr/watchtower:@sha256:f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b' # https://hub.docker.com/layers/containrrr/watchtower/amd64-1.7.1/images/sha256-f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b?context=explore
+    image: 'containrrr/watchtower@sha256:f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b' # https://hub.docker.com/layers/containrrr/watchtower/amd64-1.7.1/images/sha256-f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b?context=explore
     command: '--schedule "0 0 4 * * *" --http-api-update --cleanup'
     # TODO secret should be stored in .env ... 
     environment:
@@ -43,7 +43,7 @@ services:
     #   - "com.centurylinklabs.watchtower.enable=false"
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-    # restart: 'unless-stopped' # aga need better policy -- dont bindly restart - but need start up at system boot
+    restart: 'unless-stopped' # aga need better policy -- dont bindly restart - but need start up at system boot
     # // TODO restart docker or not (ec2 restart; jenkins restart; dk other cases too)
     # TODO @need_check network_mode
     # @que: docker-compose up twice seems multi create

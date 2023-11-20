@@ -33,5 +33,3 @@ import { NextFetchEvent, NextMiddleware, NextRequest, NextResponse } from 'next/
 export async function middleware(req: NextRequest, _next: NextFetchEvent) {
   // console.log(req);
 }
-
-// test overwrite
