@@ -13,6 +13,13 @@
 }
 .panelMainConvert .panelInputCode {
   border: 1px solid orange;
+<<<<<<< refs/remotes/origin/main
+=======
+<<<<<<< Updated upstream
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> Auto stash before merge of "main" and "origin/main"
   flex: 3;
 }
 .panelMainConvert .panelOutputCode {
@@ -22,4 +29,18 @@
 .panelMainConvert .panelConvertButtonBox {
   border: 1px solid grey;
   flex: 1;
+<<<<<<< refs/remotes/origin/main
+=======
+<<<<<<< Updated upstream
+=======
+}
+.panelMainConvert .panelOutputCode {
+  border: 1px solid grey;
+}
+.panelMainConvert .panelConvertButtonBox {
+  border: 1px solid grey;
+>>>>>>> 648a3ef47f385ba548c714eafbaf36e80f9e88b5
+=======
+>>>>>>> Stashed changes
+>>>>>>> Auto stash before merge of "main" and "origin/main"
 }/*# sourceMappingURL=page.module.css.map */
