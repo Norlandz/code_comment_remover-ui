@@ -13,7 +13,10 @@
 }
 .panelMainConvert .panelInputCode {
   border: 1px solid orange;
+<<<<<<< Updated upstream
 <<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
   flex: 3;
 }
 .panelMainConvert .panelOutputCode {
@@ -23,6 +26,7 @@
 .panelMainConvert .panelConvertButtonBox {
   border: 1px solid grey;
   flex: 1;
+<<<<<<< Updated upstream
 =======
 }
 .panelMainConvert .panelOutputCode {
@@ -31,4 +35,6 @@
 .panelMainConvert .panelConvertButtonBox {
   border: 1px solid grey;
 >>>>>>> 648a3ef47f385ba548c714eafbaf36e80f9e88b5
+=======
+>>>>>>> Stashed changes
 }/*# sourceMappingURL=page.module.css.map */
