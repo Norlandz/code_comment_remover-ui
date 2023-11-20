@@ -1,4 +1,7 @@
+<<<<<<< b978a217b6e835237145f6521c1b99a71df0ecb2
 <<<<<<< refs/remotes/origin/main
+=======
+>>>>>>> README.md from old branch
 ### intro
 functionality: remove comments in `java / ts (& tsx)` file.
 
@@ -8,13 +11,17 @@ functionality: remove comments in `java / ts (& tsx)` file.
 
 ### demo
 ![image](https://github.com/Norlandz/code_comment_remover-ui/assets/43581880/fca7e946-fd86-4a49-ac6b-c23d9caf0240)
+<<<<<<< b978a217b6e835237145f6521c1b99a71df0ecb2
 ![aws_Server_Jenkins_Docker_PrivateSubnet_ApiGateway - 20231116_2001  template](https://github.com/Norlandz/code_comment_remover-ui/assets/43581880/b63d1e35-345b-4c3d-963a-f0efae1c5344)
+=======
+>>>>>>> README.md from old branch
 
 ### related projects 
 
 https://github.com/Norlandz/code_comment_remover-ui (this) \
 https://github.com/Norlandz/JavaParserSub \
 https://github.com/Norlandz/JsParserSub
+<<<<<<< b978a217b6e835237145f6521c1b99a71df0ecb2
 =======
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
@@ -53,3 +60,5 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
 >>>>>>> base version readme get stashed...
+=======
+>>>>>>> README.md from old branch
