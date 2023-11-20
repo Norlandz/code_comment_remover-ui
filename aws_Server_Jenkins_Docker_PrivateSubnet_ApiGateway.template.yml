@@ -1,0 +1,704 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'aws_Server_Jenkins_Docker_PrivateSubnet_ApiGateway'
+####
+Parameters:
+  amiAws:
+    Type: 'AWS::EC2::Image::Id'
+    Default: 'ami-061ac2e015473fbe2'
+  # amiFckNat:
+  #   Type: 'AWS::EC2::Image::Id'
+  #   Default: 'ami-0f57d652281755ea1'
+  amiAwsNat:
+    Type: 'AWS::EC2::Image::Id'
+    Default: 'ami-0b15d0e49cdb9de5d'
+    Description: 'amzn-ami-vpc-nat-2018.03.0.2023'
+  ec2Type:
+    Type: String
+    Default: 't2.micro'
+  vpcCidr:
+    Type: String
+    Default: '10.14.0.0/22'
+  # seems nothing need in the public subnet...
+  # well NAT instance
+  subnetCidrPublic:
+    Type: String
+    Default: '10.14.0.0/24'
+  subnetCidrMainPrivate:
+    Type: String
+    Default: '10.14.1.0/24'
+  ipAddrIngressSgDeveloperSshHttp:
+    Type: String
+    Default: '185.40.122.100/32'
+    Description: 'allowed IPv4 address cidr block _ for ingress in security group _ of mainApp _ for ssh or http --ie: a developIp that has the permission to access some backend services for programming'
+    AllowedPattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,2}$'
+    ConstraintDescription: 'Enter a valid IPv4 address cidr block'
+  # FIXME
+  # method[good%] use Route53 Dns ((or ServiceDiscovery in CloudMap))
+  # method[bad%] manual assign fixed ip (no change (no auto scale; though can reboot) ; potential ip confliction) 
+  # method[bad%] manually change ip in Jenkinsfile every first launch
+  # // actually.. nvm the Nginx is also using fixed ip at first launch ....
+  ipAddrPrivateMainApp:
+    Type: String
+    Default: '10.14.1.11'
+    Description: 'manually assign private IP address for mainApp (so that JenkinsController knows where to call to DockerWatchtower)'
+    AllowedPattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+    ConstraintDescription: 'Enter a valid IPv4 address'
+  portMainAppFrontExe:
+    Type: Number
+    Default: 3000
+  portJenkinsControllerMainApp:
+    Type: Number
+    Default: 8080
+  portDockerWatchtowerMainApp:
+    Type: Number
+    Default: 8686
+####
+Resources:
+  ## !SECTION
+  ## SECTION ec2MainApp
+  ec2MainApp:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref amiAws
+      InstanceType: !Ref ec2Type
+      IamInstanceProfile: !Ref iamProfileMainApp # instead of ec2-ssm-core we use a instance profile created in the same template for testability
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          AssociatePublicIpAddress: false # @config[if need Eic -: true]
+          PrivateIpAddress: !Ref ipAddrPrivateMainApp
+          GroupSet: [!Ref sgMainApp]
+          SubnetId: !Ref subnetMainAppPrivate
+          DeleteOnTermination: true
+      # amazon web services - What is the difference between volume and blockdevicemapping tags in EC2 CloudFormation - Stack Overflow
+      # https://stackoverflow.com/questions/37372693/what-is-the-difference-between-volume-and-blockdevicemapping-tags-in-ec2-cloudfo
+      #
+      # amazon web services - aws CloudFormation AWS::EC2::Instance BlockDeviceMappings and Volumes - Stack Overflow
+      # https://stackoverflow.com/questions/15391718/aws-cloudformation-awsec2instance-blockdevicemappings-and-volumes
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: 13
+            VolumeType: 'gp3'
+            Encrypted: false
+            DeleteOnTermination: true
+            # SnapshotId: 'snap-05a6245e68e6545b5'
+      # AvailabilityZone: !Sub "${AWS::Region}a"
+      # EbsOptimized: false
+      # Tenancy: "default"
+      # HibernationOptions:
+      #   Configured: false
+      # EnclaveOptions:
+      #   Enabled: false
+      KeyName: !Ref keyPairEc2MainApp
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          sudo su
+          set -x
+
+          #>> add swapfile @pb[npm install hang]
+          mkdir -p /usr/local/diskUsing && cd "$_"
+          sudo dd if=/dev/zero of=swapfile bs=1M count=1500
+          sudo mkswap swapfile
+          sudo chown root:root swapfile
+          sudo chmod 600 swapfile
+          sudo swapon swapfile
+          free|grep -i Swap
+          cat >> /etc/fstab <<EOF
+          /usr/local/diskUsing/swapfile    none    swap    sw    0   0
+          EOF
+          cat /etc/fstab
+          df -h
+          lsblk
+
+          #>>
+          yum update -y
+
+          #>> install docker
+          yum install docker -y
+          # @dk_design @messy 
+          usermod -a -G docker ec2-user
+          systemctl enable docker
+          systemctl start docker
+
+          #>>> install docker-compose
+          curl -L https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+
+          #>> run mainApp docker-compose
+          mkdir -p /usr/local/diskUsing && cd "$_"
+          curl -O https://raw.githubusercontent.com/Norlandz/code_comment_remover-ui/main/docker-compose.yml
+          docker-compose pull && docker-compose up -d
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-ec2MainApp' }
+    DependsOn:
+      - 'attachIgw' # cuz need internet to download things
+      - 'natInstance'
+    # >"  We need to +- manually tell CloudFormation about a dependency here.  ~~//@que still
+    # [] If this resource has a public IP address and is also in a VPC that is defined in the same template, you must use the DependsOn Attribute to declare a dependency on the VPC-gateway attachment.
+    # @que: seems the DependsOn is due to need to install update?...
+  ## !SECTION
+  ## SECTION ec2JenkinsController
+  ec2JenkinsController:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref amiAws
+      InstanceType: !Ref ec2Type
+      IamInstanceProfile: !Ref iamProfileMainApp # instead of ec2-ssm-core we use a instance profile created in the same template for testability
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          AssociatePublicIpAddress: false # @config[if need Eic -: true]
+          GroupSet: [!Ref sgJenkinsController]
+          SubnetId: !Ref subnetMainAppPrivate
+          DeleteOnTermination: true
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: 13
+            VolumeType: 'gp3'
+            Encrypted: false
+            DeleteOnTermination: true
+      # KeyName: !Ref keyPairEc2JenkinsController
+      KeyName: !Ref keyPairEc2MainApp
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          sudo su
+          set -x
+
+          #>> add swapfile @pb[npm install hang]
+          mkdir -p /usr/local/diskUsing && cd "$_"
+          sudo dd if=/dev/zero of=swapfile bs=1M count=1500
+          sudo mkswap swapfile
+          sudo chown root:root swapfile
+          sudo chmod 600 swapfile
+          sudo swapon swapfile
+          free|grep -i Swap
+          cat >> /etc/fstab <<EOF
+          /usr/local/diskUsing/swapfile    none    swap    sw    0   0
+          EOF
+          cat /etc/fstab
+          df -h
+          lsblk
+
+          #>>
+          yum update -y
+
+          #>> install docker
+          yum install docker -y
+          # @dk_design @messy 
+          usermod -a -G docker ec2-user
+          systemctl enable docker
+          systemctl start docker
+
+          #>> run jenkins_controller
+          mkdir -p /usr/local/diskUsing && cd "$_"
+          # https://hub.docker.com/layers/jenkins/jenkins/2.414.3-lts-jdk17/images/sha256-683d24e196c4cc90cabdefc74942a5af842dca9f836399027ecd1a91444dd8e2?context=explore
+          docker run \
+            --name jenkins_main \
+            -p 8080:8080 -p 50000:50000 \
+            -v jenkins_home:/var/jenkins_home \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            --detach \
+            --restart=unless-stopped \
+            jenkins/jenkins@sha256:683d24e196c4cc90cabdefc74942a5af842dca9f836399027ecd1a91444dd8e2
+
+          #>> config jenkins_controller (# manually || use configuration_as_code + Jenkins_Job_DSL || just copy the whole Jenkins_Home dir)
+          # docker exec jenkins_main cat /var/jenkins_home/secrets/initialAdminPassword  
+          # install plugins # config nodejs/maven tool # config credentials
+          # create cloud node agent -- config docker host url & docker agent template & volume socket & permission 
+          # create job & git pull Jenkinsfile
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-ec2JenkinsController' }
+    DependsOn:
+      - 'attachIgw' # cuz need internet to download things
+      - 'natInstance'
+  ## !SECTION
+  ## SECTION iam ec2MainApp
+  iamProfileMainApp:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+        - !Ref iamRoleSsm
+  iamRoleSsm:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'ec2.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      # TODO need syntax understand fully & other bette role needed & the assumeRole que & inline policy
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-iamRoleSsm' }
+  ## !SECTION
+  ## SECTION sg ec2MainApp
+  sgMainApp:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: 'sgMainApp'
+      GroupDescription: 'sgMainApp'
+      VpcId: !Ref vpcMainApp
+      SecurityGroupIngress:
+        - { IpProtocol: 'tcp', FromPort: 22, ToPort: 22, SourceSecurityGroupId: !GetAtt sgReverseProxy.GroupId, Description: 'AllowIngress developerIp -to- ReverseProxy(/BastionHost) -to- MainApp;JenkinsController;' }
+        - { IpProtocol: 'tcp', FromPort: 443, ToPort: 443, SourceSecurityGroupId: !GetAtt sgNatInstance.GroupId, Description: 'Allow Ssm (only needed sometimes at first launch) stackoverflow.com/questions/62617661/aws-session-manager-cant-connect-unless-opening-ssh-port' }
+        # - { IpProtocol: 'tcp', FromPort: 22, ToPort: 22, CidrIp: '18.206.107.24/29', Description: 'Allow Eic stackoverflow.com/questions/56917634/amazon-ec2-instance-connect-for-ssh-security-group // us-east-1' } # @config[if need EIC -: uncomment]
+        - { IpProtocol: 'tcp', FromPort: 80, ToPort: 80, SourceSecurityGroupId: !GetAtt sgReverseProxy.GroupId, Description: 'AllowIngress anyIp -to- ReverseProxy -to- MainApp codeCommentRemover-Ui' }
+        - { IpProtocol: 'tcp', FromPort: !Ref portMainAppFrontExe, ToPort: !Ref portMainAppFrontExe, SourceSecurityGroupId: !GetAtt sgReverseProxy.GroupId, Description: 'AllowIngress anyIp -to- ReverseProxy -to- MainApp codeCommentRemover-Ui' }
+        - { IpProtocol: 'tcp', FromPort: !Ref portDockerWatchtowerMainApp, ToPort: !Ref portDockerWatchtowerMainApp, SourceSecurityGroupId: !GetAtt sgReverseProxy.GroupId, Description: 'AllowIngress developerIp -to- ReverseProxy -to- MainApp DockerWatchtower' }
+        - { IpProtocol: 'tcp', FromPort: !Ref portDockerWatchtowerMainApp, ToPort: !Ref portDockerWatchtowerMainApp, SourceSecurityGroupId: !GetAtt sgJenkinsController.GroupId, Description: 'AllowIngress JenkinsController -to- MainApp DockerWatchtower' } # aga, no need publish_over_ssh
+      SecurityGroupEgress:
+        - { IpProtocol: '-1', FromPort: '-1', ToPort: '-1', CidrIp: '0.0.0.0/0' }
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-sgMainApp' }
+  sgJenkinsController:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: 'sgJenkinsController'
+      GroupDescription: 'sgJenkinsController'
+      VpcId: !Ref vpcMainApp
+      SecurityGroupIngress:
+        - { IpProtocol: 'tcp', FromPort: 22, ToPort: 22, SourceSecurityGroupId: !GetAtt sgReverseProxy.GroupId, Description: 'AllowIngress developerIp -to- ReverseProxy(/BastionHost) -to- MainApp;JenkinsController;' }
+        - { IpProtocol: 'tcp', FromPort: 443, ToPort: 443, SourceSecurityGroupId: !GetAtt sgNatInstance.GroupId, Description: 'Allow Ssm (only needed sometimes at first launch) stackoverflow.com/questions/62617661/aws-session-manager-cant-connect-unless-opening-ssh-port' }
+        # - { IpProtocol: 'tcp', FromPort: 22, ToPort: 22, CidrIp: '18.206.107.24/29', Description: 'Allow Eic stackoverflow.com/questions/56917634/amazon-ec2-instance-connect-for-ssh-security-group // us-east-1' } # @config[if need EIC -: uncomment]
+        - { IpProtocol: 'tcp', FromPort: !Ref portJenkinsControllerMainApp, ToPort: !Ref portJenkinsControllerMainApp, SourceSecurityGroupId: !GetAtt sgReverseProxy.GroupId, Description: 'AllowIngress developerIp -to- ReverseProxy -to- JenkinsController' }
+      SecurityGroupEgress:
+        - { IpProtocol: '-1', FromPort: '-1', ToPort: '-1', CidrIp: '0.0.0.0/0' }
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-sgJenkinsController' }
+  sgReverseProxy:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: 'sgReverseProxy'
+      GroupDescription: 'sgReverseProxy'
+      VpcId: !Ref vpcMainApp
+      SecurityGroupIngress:
+        - { IpProtocol: 'tcp', FromPort: 22, ToPort: 22, CidrIp: !Ref ipAddrIngressSgDeveloperSshHttp, Description: 'AllowIngress developerIp -to- ReverseProxy(/BastionHost) -to- MainApp;JenkinsController;' }
+        - { IpProtocol: 'tcp', FromPort: 443, ToPort: 443, CidrIp: '0.0.0.0/0', Description: 'Allow Ssm (only needed sometimes at first launch) stackoverflow.com/questions/62617661/aws-session-manager-cant-connect-unless-opening-ssh-port' }
+        - { IpProtocol: 'tcp', FromPort: 22, ToPort: 22, CidrIp: '18.206.107.24/29', Description: 'Allow Eic stackoverflow.com/questions/56917634/amazon-ec2-instance-connect-for-ssh-security-group // us-east-1' }
+        # @que: ApiGateway setup & Security Group -- why didnt see this part of config? do i need?
+        # that nat aga not need that outbound set (stateful .. [[t)
+        # aga you cannot limit the access from ApiGateway only, so you must open to all ip addr; for the port its the same
+        # could have done path to port remapping; but the redirect of Jenkins kills that .. must start from root path, so cant ..
+        - { IpProtocol: 'tcp', FromPort: 80, ToPort: 80, CidrIp: '0.0.0.0/0', Description: 'AllowIngress anyIp -to- ReverseProxy -to- MainApp codeCommentRemover-Ui' }
+        - { IpProtocol: 'tcp', FromPort: !Ref portMainAppFrontExe, ToPort: !Ref portMainAppFrontExe, CidrIp: '0.0.0.0/0', Description: 'AllowIngress anyIp -to- ReverseProxy -to- MainApp codeCommentRemover-Ui' }
+        - { IpProtocol: 'tcp', FromPort: !Ref portJenkinsControllerMainApp, ToPort: !Ref portJenkinsControllerMainApp, CidrIp: !Ref ipAddrIngressSgDeveloperSshHttp, Description: 'AllowIngress developerIp -to- ReverseProxy -to- JenkinsController' }
+        - { IpProtocol: 'tcp', FromPort: !Ref portDockerWatchtowerMainApp, ToPort: !Ref portDockerWatchtowerMainApp, CidrIp: !Ref ipAddrIngressSgDeveloperSshHttp, Description: 'AllowIngress developerIp -to- ReverseProxy -to- MainApp DockerWatchtower' }
+      SecurityGroupEgress:
+        - { IpProtocol: '-1', FromPort: '-1', ToPort: '-1', CidrIp: '0.0.0.0/0' }
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-sgReverseProxy' }
+  ## !SECTION
+  ## SECTION vpc
+  vpcMainApp:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref vpcCidr
+      EnableDnsHostnames: true # @just_take
+      # EnableDnsSupport: true
+      # InstanceTenancy: "default"
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-vpcMainApp' }
+  subnetPublic:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs ''] # @just_take # AvailabilityZone: !GetAtt EC2Instance.AvailabilityZone
+      VpcId: !Ref vpcMainApp
+      CidrBlock: !Ref subnetCidrPublic
+      MapPublicIpOnLaunch: true
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-subnetPublic' }
+  subnetMainAppPrivate:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs ''] # @just_take
+      VpcId: !Ref vpcMainApp
+      CidrBlock: !Ref subnetCidrMainPrivate
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-subnetMainAppPrivate' }
+  ## !SECTION
+  ## SECTION igw
+  ###
+  igwMainApp:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties: # {} # @just_take
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-igwMainApp' }
+  attachIgw:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref vpcMainApp
+      InternetGatewayId: !Ref igwMainApp
+  ###
+  routeTableSubnetPublic:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref vpcMainApp
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-routeTableSubnetPublic' }
+  routeSubnetPublicToIgw:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref routeTableSubnetPublic
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref igwMainApp
+    DependsOn: 'attachIgw'
+  attachRouteTableSubnetPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref routeTableSubnetPublic
+      SubnetId: !Ref subnetPublic
+  ## !SECTION
+  ## SECTION apiGateway
+  # @main: Setting up an Api Gateway Proxy Resource using Cloudformation
+  # @main: https://cjohansen.no/aws-apigw-proxy-cloudformation/
+  # ~~~// forgot nat gatway need price too... (vpc endpoint need price emmmmm
+  ApiGatewayRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: 'sjdpa-ApiGatewayRestApi'
+      ApiKeySourceType: 'HEADER'
+      EndpointConfiguration:
+        Types:
+          - 'REGIONAL'
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-ApiGatewayRestApi' }
+  ApiGatewayResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: '{proxy+}'
+    # BlogResource:@¦    Type: 'AWS::ApiGateway::Resource'@¦    Properties:@¦      ParentId: !GetAtt Api.RootResourceId@¦      RestApiId: !Ref Api@¦      PathPart: 'blog'@¦  Resource:@¦    Type: 'AWS::ApiGateway::Resource'@¦    Properties:@¦      ParentId: !Ref BlogResource@¦      RestApiId: !Ref Api@¦      PathPart: '{proxy+}'
+  RootMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !GetAtt ApiGatewayRestApi.RootResourceId
+      HttpMethod: 'ANY'
+      AuthorizationType: 'NONE'
+      #       ApiKeyRequired: false
+      #       RequestParameters: {}
+      #       MethodResponses:
+      #       -
+      #         ResponseModels:
+      #           "application/json": !Ref ApiGatewayModel2
+      #         StatusCode: "200"
+      Integration:
+        #         CacheNamespace: !GetAtt ApiGatewayRestApi.RootResourceId
+        #         ConnectionType: "INTERNET"
+        IntegrationHttpMethod: 'ANY'
+        Type: 'HTTP_PROXY'
+        Uri: !Sub 'http://${ec2ReverseProxy.PublicIp}' # should go to ReverseProxy (/ VPC Endpoint Link), Not ec2MainApp # so :${portMainAppFrontExe} is not used here
+        PassthroughBehavior: 'WHEN_NO_MATCH'
+        IntegrationResponses:
+          - StatusCode: 200
+            # ResponseTemplates: {}
+        # TimeoutInMillis: 29000
+  ProxyMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref ApiGatewayResource
+      HttpMethod: 'ANY'
+      AuthorizationType: 'NONE'
+      # ApiKeyRequired: false
+      RequestParameters:
+        method.request.path.proxy: true
+      Integration:
+        # CacheNamespace: !Ref ApiGatewayResource
+        # ConnectionType: "INTERNET"
+        # CacheKeyParameters:
+        #   - 'method.request.path.proxy'
+        RequestParameters:
+          integration.request.path.proxy: 'method.request.path.proxy'
+        IntegrationHttpMethod: 'ANY'
+        Type: 'HTTP_PROXY'
+        Uri: !Sub 'http://${ec2ReverseProxy.PublicIp}/{proxy}'
+        PassthroughBehavior: 'WHEN_NO_MATCH'
+        IntegrationResponses:
+          - StatusCode: 200
+            # ResponseTemplates: {}
+        # TimeoutInMillis: 29000
+  ApiGatewayStage:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      StageName: 'demo'
+      DeploymentId: !Ref ApiGatewayDeployment
+      RestApiId: !Ref ApiGatewayRestApi
+      CacheClusterEnabled: false
+      CacheClusterSize: '0.5'
+      TracingEnabled: false
+  # @config @note: https://medium.com/@lancers/deployment-in-amazon-api-gateway-128c522c762e
+  ApiGatewayDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: 'demo'
+    DependsOn:
+      - RootMethod
+      - ProxyMethod
+  # ApiGatewayModel2:
+  #   Type: 'AWS::ApiGateway::Model'
+  #   Properties:
+  #     RestApiId: !Ref ApiGatewayRestApi
+  #     Name: 'Empty'
+  #     Description: 'This is a default empty schema model'
+  #     Schema: |
+  #       {
+  #         "$schema": "http://json-schema.org/draft-04/schema#",
+  #         "title" : "Empty Schema",
+  #         "type" : "object"
+  #       }
+  #     ContentType: 'application/json'
+  ###  apiGateway VPC Endpoint PrivateLink
+  # No money for this... just use a ReverseProxy & leave ApiGateway as it was -- redundant delegate
+  ## !SECTION
+  ## SECTION ec2ReverseProxy
+  # 1. agw cannot go to private ip
+  # 1. cannot limit to api gateway only
+  # - no security group setting for reverse_proxy
+  # - unless sl certificate -- too ocmplex ..
+  # 1. must use VPC link
+  # ( guess agw just outside the VPC dk those ...
+  # 1. seems api gateway is not much better than manual setting routes ... just reverse proxy should be fine (dk; say Spring gateway setting ;then those js, self setting em
+  ec2ReverseProxy:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref amiAws
+      InstanceType: !Ref ec2Type
+      IamInstanceProfile: !Ref iamProfileMainApp # instead of ec2-ssm-core we use a instance profile created in the same template for testability
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          AssociatePublicIpAddress: true
+          GroupSet: [!Ref sgReverseProxy]
+          SubnetId: !Ref subnetPublic
+          DeleteOnTermination: true
+      # KeyName: !Ref keyPairEc2ReverseProxy
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo su
+          set -x
+          yum update -y
+          yum install -y git
+
+          #>> config nginx
+          cat > /etc/nginx/conf.d/reverseProxyAwsPrivateSubnet.conf << 'EOF'
+
+            # @not_sure multiple server?
+            server {
+              listen       80;
+              # @need_fix not the best routing base on port ... should base on functionality 
+              listen       ${portMainAppFrontExe}; 
+              listen       [::]:80;
+              # server_name  _;
+
+              location / {
+                proxy_pass http://${ec2MainApp.PrivateIp}:${portMainAppFrontExe};
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+              }
+            }
+            server {
+              listen       ${portDockerWatchtowerMainApp};
+              # listen       [::]:80;
+              # server_name  _;
+
+              location / {
+                proxy_pass http://${ec2MainApp.PrivateIp}:${portDockerWatchtowerMainApp};
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+              }
+            }
+
+            server {
+              listen       ${portJenkinsControllerMainApp};
+              # listen       [::]:80;
+              # server_name  _;
+
+              # TODO @need_check setenforce Permissive or not
+              # @pb-soln must use root path...
+              location / {
+                sendfile off;
+                proxy_pass         http://${ec2JenkinsController.PrivateIp}:${portJenkinsControllerMainApp};
+                proxy_redirect     default;
+                proxy_http_version 1.1;
+
+                # # Required for Jenkins websocket agents
+                # proxy_set_header   Connection        $connection_upgrade;
+                # proxy_set_header   Upgrade           $http_upgrade;
+
+                proxy_set_header   Host              $http_host;
+                proxy_set_header   X-Real-IP         $remote_addr;
+                proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto $scheme;
+                proxy_max_temp_file_size 0;
+
+                #this is the maximum upload size
+                client_max_body_size       10m;
+                client_body_buffer_size    128k;
+
+                proxy_connect_timeout      90;
+                proxy_send_timeout         90;
+                proxy_read_timeout         90;
+                proxy_request_buffering    off; # Required for HTTP CLI commands
+                proxy_set_header Connection ""; # Clear for keepalive
+              }
+              # # fix the trialing slash trimmed pb (ApiGateway ... @bad_design_lib)
+              # location /jenkins-heartbeat {
+              #   return 302 /jenkins-heartbeat/;
+              # }
+              # location /jenkins-heartbeat/ {
+              #   proxy_pass http://${ec2JenkinsController.PrivateIp}:3000/;
+              #   proxy_set_header Host $host;
+              #   proxy_set_header X-Real-IP $remote_addr;
+              # }
+            }
+          EOF
+
+          cat /etc/nginx/conf.d/reverseProxyAwsPrivateSubnet.conf
+
+          systemctl enable nginx 
+          systemctl start nginx 
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-ec2ReverseProxy' }
+    DependsOn:
+      - 'ec2MainApp'
+      - 'ec2JenkinsController'
+      - 'attachIgw'
+  ## !SECTION
+  ## SECTION natInstance
+  # No money for NatGateway
+  # @main: https://fck-nat.dev/deploying/
+  # too hard, use the Offical Deprecated one ... # dk why need ami image, not just userData bash script .
+  natInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref amiAwsNat
+      InstanceType: !Ref ec2Type
+      SecurityGroupIds: [!Ref sgNatInstance]
+      SubnetId: !Ref subnetPublic
+      IamInstanceProfile: !Ref iamProfileMainApp
+      SourceDestCheck: false
+      #       NetworkInterfaces: #         - AssociatePublicIpAddress: true # or # MapPublicIpOnLaunch
+      # @que-minor: ebs volume type is not gp2 or gp3, its magnetic standard .. dk does old version ami affect this...
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-natInstance' }
+  ###
+  sgNatInstance:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: 'sjdpa-sgNatInstance'
+      GroupDescription: 'sjdpa-sgNatInstance'
+      VpcId: !Ref vpcMainApp
+      SecurityGroupIngress:
+        - { IpProtocol: 'tcp', FromPort: 80, ToPort: 80, CidrIp: !GetAtt subnetMainAppPrivate.CidrBlock }
+        - { IpProtocol: 'tcp', FromPort: 443, ToPort: 443, CidrIp: !GetAtt subnetMainAppPrivate.CidrBlock }
+          # @todo for ssm / eic need add # also the public ip thing if need
+      SecurityGroupEgress:
+        - { IpProtocol: '-1', FromPort: '-1', ToPort: '-1', CidrIp: '0.0.0.0/0' }
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-sgNatInstance' }
+  ###
+  routeTableSubnetMainAppPrivate:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref vpcMainApp
+      Tags:
+        - { Key: 'ProjCate', Value: 'sjdpa-basic' }
+        - { Key: 'Name', Value: 'sjdpa-routeTableSubnetMainAppPrivate' }
+  routeSubnetPrivateToNatInstance:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref routeTableSubnetMainAppPrivate
+      DestinationCidrBlock: '0.0.0.0/0'
+      InstanceId: !Ref natInstance
+      # NetworkInterfaceId: "eni-07bd8a6ab69de0d68"
+    # DependsOn: 'attachIgw'
+  attachRouteTableSubnetMainAppPrivate:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref routeTableSubnetMainAppPrivate
+      SubnetId: !Ref subnetMainAppPrivate
+  ## !SECTION
+  ## SECTION others
+  ## bastionHost ||  _ Eic / Ssm _ + _ public ip / VPC endpoint _ ...
+  ## Dhcp ; _ Route53 || custom DnsServer _ ;
+  ## !SECTION
+  ## SECTION keyPairEc2
+  keyPairEc2MainApp:
+    Type: 'AWS::EC2::KeyPair'
+    Properties:
+      KeyName: 'keyPairEc2MainApp' # KeyType: 'rsa' # KeyFormat: 'pem'
+  ## !SECTION
+####
+Outputs:
+  InstanceId:
+    Value: !Ref ec2MainApp
+    Description: 'Instance id'
+####
+
+
+# ##> bash misc debug
+# 
+# docker exec -it --user root jenkins_main /bin/bash
+# ls -l /var/run/docker.sock
+# ls -l /var/jenkins_home
+# chmod 666 /var/run/docker.sock
+# chmod 777 /var/jenkins_home
+# 
+# usermod -a -G docker jenkins
+# usermod -aG 992 jenkins
+# groupadd -g 992 docker
+# useradd -u 1000 -g 992
+# jenkins:x:1000:1000::/var/jenkins_home:/bin/bash
+# 
+# docker ps -a --no-trunc --size
+# docker image ls -a
+# docker volume ls
+# docker rm jenkins_main
+# docker container prune
+# docker image prune -a
+# docker volume prune -a
+# docker system prune
+# docker system prune -a --volumes
+# 
+# service docker stop
+# systemctl stop docker.socket docker.service
+# 
+# sudo swapoff -a
+# sudo swapon -a
+# 
+# mkdir -p /usr/local/diskUsing && cd "$_"
+# cat > Ec2KeyPair.pem << 'EOF'
+# EOF
+# chmod 600 Ec2KeyPair.pem
+# ssh -i "Ec2KeyPair.pem" ec2-user@10.15.1.200
+# 
+# aws sts get-caller-identity
+# aws sts get-session-token --duration-seconds 3600
+# 
+# apt-get update
+# apt-get -y install vim
+# apt-get -y install curl
