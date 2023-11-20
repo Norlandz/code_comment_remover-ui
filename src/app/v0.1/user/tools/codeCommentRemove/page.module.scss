@@ -15,14 +15,17 @@
 
   .panelInputCode {
     border: 1px solid orange;
+    flex: 3;
   }
 
   .panelOutputCode {
     border: 1px solid grey;
+    flex: 3;
   }
 
   .panelConvertButtonBox {
     border: 1px solid grey;
+    flex: 1;
   }
 
 }

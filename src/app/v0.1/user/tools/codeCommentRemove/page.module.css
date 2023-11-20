@@ -13,10 +13,13 @@
 }
 .panelMainConvert .panelInputCode {
   border: 1px solid orange;
+  flex: 3;
 }
 .panelMainConvert .panelOutputCode {
   border: 1px solid grey;
+  flex: 3;
 }
 .panelMainConvert .panelConvertButtonBox {
   border: 1px solid grey;
+  flex: 1;
 }/*# sourceMappingURL=page.module.css.map */

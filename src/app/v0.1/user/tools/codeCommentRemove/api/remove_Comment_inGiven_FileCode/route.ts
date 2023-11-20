@@ -1,51 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ProgramLang, RemoveCodeCommentSender } from '../../RemoveCodeCommentSender';
-import { FetchResponseException } from '@/exception/fetchApi/FetchResponseException';
-import { CategorySrcCodeBelongsTo, ErrorBelongWrapper } from '@/exception/general/ErrorBelongWrapper';
+import * as RemoveCodeCommentSender from '../../serviceDelegator/RemoveCodeCommentSender';
+import { headers } from 'next/headers';
+import { CodeConversionInputMsg, CodeConversionOutputMsg, typeguard_unsafe_CodeConversionInputMsg } from '../../msgSchema/CodeConversionMsgSchema';
 
-type CodeConversionInputMsg = {
-  pglang: ProgramLang;
-  codeInput: string;
-};
-// ;; ;; type CodeConversionInputMsgMap = { pglang: string; codeInput: string };
-// ;; ;; type CodeConversionInputMsgMap = Map<'pglang' | 'codeInput', string>;
-// ;; ;; const queryString = (req.nextUrl.searchParams as unknown as CodeConversionInputMsgMap).get('');
-// ;; ;; bad_design .. cant type the URLSearchParams , must string everything
-// ;; []
-// ;;   for(const [key, value] of entries) { // each 'entry' is a [key, value] tupple
-// ;; <>
-// ;; https://stackoverflow.com/questions/8648892/how-to-convert-url-parameters-to-a-javascript-object
-// ;;
-// ;; ~~~// this screw up the performance ...
-// ;; but can use ClassTransformer if needed  // r b, should just go brute force no brainer ; tt
+// TODOV consider 'use server' // both seems work, pb is now more of the [calling inside server_component extra round trip pb]
+// @rem // { params }: { params: { testPathName: string } } // req.nextUrl.searchParams.get('codeInput');
+export async function POST(req: NextRequest): Promise<NextResponse<CodeConversionOutputMsg | null>> {
+  // TODOX did I use typeguard ? or what conversion
+  // TODO how do i specify Content-Type in Server ?
+  // TODOX better way to process content-type
+  // TODOX next .text() .json() ... // mdn thing, now need know more about the stream await // axios fetch auto convert body
+  const mpp_header = headers();
+  const contentType = mpp_header.get('content-type'); // mpp_header.get('Content-Type') // @confirm: both works
+  if (contentType == null) return NextResponse.json({ codeOutput: undefined, errorName: undefined, errorMsg: 'missing content-type header' }, { status: 400 });
+  if (!contentType.includes('application/json')) return NextResponse.json(null, { status: 415, statusText: 'Unsupported Media Type' });
 
-type CodeConversionOutputMsg = {
-  codeOutput: string | undefined;
-  errorMsg?: string;
-};
-
-export async function GET(
-  req: NextRequest
-  // { params }: { params: { testPathName: string } }
-): Promise<NextResponse<CodeConversionOutputMsg>> {
-  const pgLang_querystr = req.nextUrl.searchParams.get('pglang');
-  if (pgLang_querystr == null) throw new TypeError();
-  const codeInput_querystr = req.nextUrl.searchParams.get('codeInput');
-  if (codeInput_querystr == null) throw new TypeError();
   // const pgLang = ProgramLang[pgLang_querystr]; // ~~~// aga the support of enum in TypeScript is soooo unsafe ....
-
-  try {
-    const codeOutput = await RemoveCodeCommentSender.removeCodeComment(codeInput_querystr, pgLang_querystr as ProgramLang);
-    return NextResponse.json({ codeOutput });
-  } catch (error) {
-    if (!(error instanceof ErrorBelongWrapper)) throw error;
-    if (error.categorySrcCodeBelongsTo === CategorySrcCodeBelongsTo.fetchApi) {
-      if (error.errorWrapped instanceof FetchResponseException) {
-        return NextResponse.json({ codeOutput: undefined, errorMsg: await error.errorWrapped.fetchResponse.text() });
-      } else if (error.errorWrapped instanceof TypeError) {
-        return NextResponse.json({ codeOutput: undefined, errorMsg: error.errorWrapped.message });
-      }
-    }
-    throw error.errorWrapped;
-  }
+  // ; so must have typeguard, else Api url call is inconsistent as the UI button click // ( just 3 entry think ...
+  // ; thats why dont expose other api endpoint .. those miss input schema thing -- dont ('want to) impl aga in the backend server ...
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const codeConversionInputMsg = await req.json();
+  if (!typeguard_unsafe_CodeConversionInputMsg(codeConversionInputMsg)) return NextResponse.json({ codeOutput: undefined, errorName: undefined, errorMsg: 'Json Input Type is wrong' }, { status: 400 });
+  return await RemoveCodeCommentSender.removeCodeComment_fetchApi(codeConversionInputMsg);
 }

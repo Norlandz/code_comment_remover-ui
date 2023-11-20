@@ -1,6 +1,21 @@
 {
   "version": "0.2.0",
   "configurations": [
+    // {
+    //   "type": "node"
+    //   "request": "launch",
+    //   "name": "Launch Program",
+    //   "program": "${workspaceFolder}/app.js",
+    //   "skipFiles": [
+    //     "<node_internals>/**"
+    //   ],
+    // },
+    // {
+    //   "type": "chrome",
+    //   "request": "launch",
+    //   "name": "Open index.html",
+    //   "file": "h:\\Using\\tldraw-contribute\\tldraw\\apps\\examples\\src\\index.html"
+    // },
     {
       "type": "node",
       "request": "launch",
@@ -11,20 +26,16 @@
       "args": [],
       "skipFiles": [
         "<node_internals>/**",
-        "node_modules/**"
+        "**/node_modules/**",
       ],
     },
-    // {
-    //   "type": "chrome",
-    //   "request": "launch",
-    //   "name": "Open index.html",
-    //   "file": "h:\\Using\\tldraw-contribute\\tldraw\\apps\\examples\\src\\index.html"
-    // },
     {
       "type": "chrome",
       "request": "launch",
-      "name": "Debug Vite",
-      "url": "http://localhost:5173",
+      // "name": "Debug Vite",
+      // "url": "http://localhost:5173",
+      "name": "Debug Nextjs client",
+      "url": "http://localhost:3000",
       // https://stackoverflow.com/questions/66147328/is-there-a-way-to-debug-code-in-vscode-initiated-with-vite
       // must have the vite server already running, then attach 
       // "webRoot": "H:/Using/tldraw-contribute/tldraw/apps/examples/src"
@@ -33,13 +44,28 @@
       // https://stackoverflow.com/questions/47556495/how-do-i-skip-external-code-when-debugging-in-vs-code
       "skipFiles": [
         "<node_internals>/**",
+        "**/node_modules/**",
         "${workspaceFolder}/node_modules/**/*.js",
-        "**/proxy.js",
-        "**/prepareinjection.js",
-        "**/installhook.js",
-        "main.jsx",
-        "@react-refresh",
+        // "**/proxy.js",
+        // "**/prepareinjection.js",
+        // "**/installhook.js",
+        // "main.jsx",
+        // "@react-refresh",
       ],
-    }
+    },
+    // []
+    // --inspect-brk=5858
+    // <>
+    // https://stackoverflow.com/questions/34835082/how-to-debug-using-npm-run-scripts-from-vscode
+    {
+      "type": "node-terminal",
+      "name": "Debug Nextjs server",
+      "request": "launch",
+      "command": "pnpm run dev",
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ],
+    },
   ]
 }
